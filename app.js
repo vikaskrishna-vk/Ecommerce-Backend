@@ -105,27 +105,27 @@ app.get("/products/:id", async (req, res) => {
   res.json(product);
 });
 
-// app.delete("/products", async (req, res) => {
-//   try {
-//     let products = await productmodel.findByIdAndDelete(req.body.id);
-//     res.status(200).json({ msg: "Product deleted successfully" });
-//   } catch (error) {
-//     res.json({
-//       msg: error.message,
-//     });
-//   }
-// });
+app.delete("/products", async (req, res) => {
+  try {
+    let products = await productmodel.findByIdAndDelete(req.body.id);
+    res.status(200).json({ msg: "Product deleted successfully" });
+  } catch (error) {
+    res.json({
+      msg: error.message,
+    });
+  }
+});
 
-// app.put("/products", async (req, res) => {
-//   try {
-//     let products = await productmodel.findByIdAndUpdate(req.body.id, req.body);
-//     res.status(200).json({ msg: "Product updated successfully" });
-//   } catch (error) {
-//     res.json({
-//       msg: error.message,
-//     });
-//   }
-// });
+app.put("/products", async (req, res) => {
+  try {
+    let products = await productmodel.findByIdAndUpdate(req.body.id, req.body);
+    res.status(200).json({ msg: "Product updated successfully" });
+  } catch (error) {
+    res.json({
+      msg: error.message,
+    });
+  }
+});
 
 app.get("/products/:id", async (req, res) => {
   id = req.params.id;
