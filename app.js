@@ -60,7 +60,7 @@ app.post("/products", async (req, res) => {
     const { title, price, image } = req.body;
     await productmodel.create({ title, price, image });
     res.status(201).json({ msg: "Product added successfully" });
-    let transport = nodemailer.createTransport({
+    let transport = await nodemailer.createTransport({
       service: "gmail",
       auth: {
         user: process.env.GMAIL_USER,
@@ -74,7 +74,7 @@ app.post("/products", async (req, res) => {
       html: `<h2>Welcome ${username}!</h2><p>Your product was added successfully.</p>`,
     };
 
-    transport.sendMail(mailOptions, (error, info) => {
+    await transport.sendMail(mailOptions, (error, info) => {
       if (error) {
         console.log("❌ Error occurred:", error.message);
       } else {
