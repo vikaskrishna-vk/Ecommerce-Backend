@@ -1,14 +1,17 @@
 const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
+const helmet = require("helmet");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
+const nodemailer = require("nodemailer");
 dotenv.config();
 const port = process.env.PORT;
 const secretkey = process.env.SECRET_KEY;
 const mongourl = process.env.MONGO_URI;
 
 const app = express();
+app.use(helmet());
 
 const mongoose = require("mongoose");
 async function connection() {
@@ -52,28 +55,55 @@ app.get("/", (req, res) => {
 });
 
 //CRUD operations
-// app.post("/products", async (req, res) => {
-//   try {
-//     const { title, price, image } = req.body;
-//     await productmodel.create({ title, price, image });
-//     res.status(201).json({ msg: "Product added successfully" });
-//   } catch (err) {
-//     res.json({
-//       msg: err.message,
-//     });
-//   }
-// });
+app.post("/products", async (req, res) => {
+  try {
+    const { title, price, image } = req.body;
+    await productmodel.create({ title, price, image });
+    res.status(201).json({ msg: "Product added successfully" });
+    let transport = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
+    });
+    let mailOptions = {
+      from: process.env.GMAIL_USER,
+      to: "vkvivky2918@gmail.com",
+      subject: "product Added Successfully",
+      html: `<h2>Welcome ${username}!</h2><p>Your product was added successfully.</p>`,
+    };
 
-// app.get("/products", async (req, res) => {
-//   try {
-//     let products = await productmodel.find();
-//     res.status(200).json(products);
-//   } catch (error) {
-//     res.json({
-//       msg: error.message,
-//     });
-//   }
-// });
+    transport.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.log("❌ Error occurred:", error.message);
+      } else {
+        console.log("✅ product added successfully!");
+      }
+    });
+  } catch (err) {
+    res.json({
+      msg: err.message,
+    });
+  }
+});
+
+app.get("/products", async (req, res) => {
+  try {
+    let products = await productmodel.find();
+    res.status(200).json(products);
+  } catch (error) {
+    res.json({
+      msg: error.message,
+    });
+  }
+});
+
+app.get("/products/:id", async (req, res) => {
+  let rohan = req.params.id;
+  let product = await productmodel.findById(rohan);
+  res.json(product);
+});
 
 // app.delete("/products", async (req, res) => {
 //   try {
@@ -97,6 +127,19 @@ app.get("/", (req, res) => {
 //   }
 // });
 
+app.get("/products/:id", async (req, res) => {
+  id = req.params.id;
+  let product = await productmodel.findById(id);
+  res.json(product);
+});
+
+app.get("/details", (req, res) => {
+  let location = req.query.location;
+  let age = req.query.age;
+
+  res.send(`Location: ${location}, Age: ${age}`);
+});
+
 //register
 app.post("/register", async (req, res) => {
   try {
@@ -107,6 +150,28 @@ app.post("/register", async (req, res) => {
     let hashedpassword = await bcrypt.hash(password, 10);
     finaluser.create({ email, username, password: hashedpassword });
     res.status(201).json({ msg: "User registered successfully" });
+
+    let transport = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
+    });
+    let mailOptions = {
+      from: process.env.GMAIL_USER,
+      to: email,
+      subject: "Registration Successful",
+      html: `<h2>Welcome ${username}!</h2><p>Your registration was successful.</p>`,
+    };
+
+    transport.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.log("❌ Error occurred:", error.message);
+      } else {
+        console.log("✅ Email sent successfully!");
+      }
+    });
   } catch (err) {
     res.json({
       msg: err.message,
