@@ -1,205 +1,27 @@
 const express = require("express");
 const cors = require("cors");
-const bcrypt = require("bcrypt");
 const helmet = require("helmet");
-const jwt = require("jsonwebtoken");
-const dotenv = require("dotenv");
-const nodemailer = require("nodemailer");
-dotenv.config();
-const port = process.env.PORT;
-const secretkey = process.env.SECRET_KEY;
-const mongourl = process.env.MONGO_URI;
+require("dotenv").config();
+
+const { connectDB } = require("./config/db");
+const productRoutes = require("./routes/productRoutes");
+const authRoutes = require("./routes/authRoutes");
+const logger = require("./middlewares/logger");
 
 const app = express();
 app.use(helmet());
-
-const mongoose = require("mongoose");
-async function connection() {
-  await mongoose.connect(mongourl);
-}
-
-//create a schema
-let productschema = new mongoose.Schema({
-  title: { type: String, required: true },
-  price: { type: Number, required: true },
-  image: { type: String, required: true },
-});
-
-//create a model
-const productmodel = mongoose.model("product", productschema);
-
-//create a user schema
-let userschema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
-  username: { type: String, required: true },
-  password: { type: String, required: true },
-});
-
-//create a model for user
-const finaluser = mongoose.model("user", userschema);
-
-//middleware
 app.use(cors());
-
-app.use((req, res, next) => {
-  console.log(`logic verified`);
-  next();
-});
-
 app.use(express.json());
+app.use(logger);
 
-app.get("/", (req, res) => {
-  res.json({
-    msg: "Server is running",
-  });
-});
+app.get("/", (req, res) => res.json({ msg: "Server is running" }));
 
-//CRUD operations
-app.post("/products", async (req, res) => {
-  try {
-    const { title, price, image } = req.body;
-    await productmodel.create({ title, price, image });
-    res.status(201).json({ msg: "Product added successfully" });
-    let transport = await nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD,
-      },
-    });
-    let mailOptions = {
-      from: process.env.GMAIL_USER,
-      to: "vkvivky2918@gmail.com",
-      subject: "product Added Successfully",
-      html: `<h2>Welcome ${username}!</h2><p>Your product was added successfully.</p>`,
-    };
+app.use("/api/products", productRoutes);
+app.use("/api/auth", authRoutes);
 
-    await transport.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.log("❌ Error occurred:", error.message);
-      } else {
-        console.log("✅ product added successfully!");
-      }
-    });
-  } catch (err) {
-    res.json({
-      msg: err.message,
-    });
-  }
-});
-
-app.get("/products", async (req, res) => {
-  try {
-    let products = await productmodel.find();
-    res.status(200).json(products);
-  } catch (error) {
-    res.json({
-      msg: error.message,
-    });
-  }
-});
-
-app.get("/products/:id", async (req, res) => {
-  let rohan = req.params.id;
-  let product = await productmodel.findById(rohan);
-  res.json(product);
-});
-
-app.delete("/products", async (req, res) => {
-  try {
-    let products = await productmodel.findByIdAndDelete(req.body.id);
-    res.status(200).json({ msg: "Product deleted successfully" });
-  } catch (error) {
-    res.json({
-      msg: error.message,
-    });
-  }
-});
-
-app.put("/products", async (req, res) => {
-  try {
-    let products = await productmodel.findByIdAndUpdate(req.body.id, req.body);
-    res.status(200).json({ msg: "Product updated successfully" });
-  } catch (error) {
-    res.json({
-      msg: error.message,
-    });
-  }
-});
-
-app.get("/products/:id", async (req, res) => {
-  id = req.params.id;
-  let product = await productmodel.findById(id);
-  res.json(product);
-});
-
-app.get("/details", (req, res) => {
-  let location = req.query.location;
-  let age = req.query.age;
-
-  res.send(`Location: ${location}, Age: ${age}`);
-});
-
-//register
-app.post("/register", async (req, res) => {
-  try {
-    const { email, username, password } = req.body;
-    let users = await finaluser.findOne({ email });
-    if (users) return res.status(400).json({ msg: "User already exists" });
-    //hash password
-    let hashedpassword = await bcrypt.hash(password, 10);
-    finaluser.create({ email, username, password: hashedpassword });
-    res.status(201).json({ msg: "User registered successfully" });
-
-    let transport = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD,
-      },
-    });
-    let mailOptions = {
-      from: process.env.GMAIL_USER,
-      to: email,
-      subject: "Registration Successful",
-      html: `<h2>Welcome ${username}!</h2><p>Your registration was successful.</p>`,
-    };
-
-    transport.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.log("❌ Error occurred:", error.message);
-      } else {
-        console.log("✅ Email sent successfully!");
-      }
-    });
-  } catch (err) {
-    res.json({
-      msg: err.message,
-    });
-  }
-});
-
-//login
-app.post("/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    let users = await finaluser.findOne({ email });
-    if (!users) return res.json({ msg: "Invallid Credentials" });
-    let checkpassword = await bcrypt.compare(password, users.password);
-    if (!checkpassword) return res.json({ msg: "Incorrect email or password" });
-    //create a token
-    let payload = { email: email };
-    let token = await jwt.sign(payload, secretkey, { expiresIn: "1h" });
-    res.json({ msg: "Login Successful", token });
-  } catch (err) {
-    res.json({
-      msg: err.message,
-    });
-  }
-});
+const port = process.env.PORT || 3000;
 
 app.listen(port, async () => {
   console.log(`Server is running on http://localhost:${port}`);
-  connection();
-  console.log("Database connected");
+  await connectDB();
 });
